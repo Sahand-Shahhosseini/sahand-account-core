@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{sahand_q1}[2026/02/08 Sahand Q1 Class v1.4]
+\ProvidesClass{sahand_q1}[2026/02/08 Sahand Q1 Class v1.5]
 
 % ===== Base =====
 \LoadClass[11pt,a4paper]{article}
@@ -29,12 +29,21 @@
 }
 
 \newcommand{\SahandChoosePersianFont}{%
-  \IfFontExistsTF{Vazirmatn}{\newfontfamily\persianfont{Vazirmatn}}{%
-  \IfFontExistsTF{Noto Naskh Arabic}{\newfontfamily\persianfont{Noto Naskh Arabic}}{%
-  \IfFontExistsTF{Noto Sans Arabic}{\newfontfamily\persianfont{Noto Sans Arabic}}{%
-  \IfFontExistsTF{Amiri}{\newfontfamily\persianfont{Amiri}}{%
-  \newfontfamily\persianfont{DejaVu Sans}%
-  }}}}%
+  % Prefer Noto Arabic fonts in CI (Ubuntu: fonts-noto-*)
+  \IfFontExistsTF{Noto Naskh Arabic}{%
+    \newfontfamily\persianfont{Noto Naskh Arabic}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
+  }{%
+  \IfFontExistsTF{Noto Sans Arabic}{%
+    \newfontfamily\persianfont{Noto Sans Arabic}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
+  }{%
+  \IfFontExistsTF{Vazirmatn}{%
+    \newfontfamily\persianfont{Vazirmatn}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
+  }{%
+  \IfFontExistsTF{Amiri}{%
+    \newfontfamily\persianfont{Amiri}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
+  }{%
+    \newfontfamily\persianfont{DejaVu Sans}[Script=Arabic,Language=Persian]%
+  }}}}}%
 }
 
 \newcommand{\SahandChooseMathFont}{%

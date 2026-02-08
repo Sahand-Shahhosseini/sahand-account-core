@@ -24,7 +24,7 @@ jobs:
             texlive-luatex texlive-latex-extra texlive-pictures texlive-science \
             texlive-fonts-recommended texlive-fonts-extra latexmk zip python3
           # Fonts: best-effort (never fail the build on missing font packages)
-          sudo apt-get install -y --no-install-recommends fonts-noto-core fonts-dejavu fonts-stix || true
+          sudo apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-extra fonts-dejavu fonts-stix
 
       - name: Build DOC00_TEMPLATE
         working-directory: PROJECT_L
@@ -42,10 +42,36 @@ jobs:
               sys.exit(1)
           log = logp.read_text(errors="ignore")
           fails = []
-          if "Missing character:" in log: fails.append("Missing character (tofu risk)")
-          if "Font substitution" in log: fails.append("Font substitution")
-          if "! LaTeX Error:" in log: fails.append("LaTeX Error")
-          if re.search(r"Overfull \\hbox", log): fails.append("Overfull hbox")
+
+          def show(substr, max_lines=25):
+              hits = []
+              for line in log.splitlines():
+                  if substr in line:
+                      hits.append(line.strip())
+                      if len(hits) >= max_lines:
+                          break
+              if hits:
+                  print(f"--- QA DEBUG ({substr}) first {len(hits)} lines ---")
+                  for h in hits:
+                      print(h)
+
+          if "Missing character:" in log:
+              fails.append("Missing character (tofu risk)")
+              show("Missing character:")
+          if "Font substitution" in log:
+              fails.append("Font substitution")
+              show("Font substitution")
+          if "! LaTeX Error:" in log:
+              fails.append("LaTeX Error")
+              for line in log.splitlines():
+                  if line.startswith("! LaTeX Error:"):
+                      print("--- QA DEBUG (first LaTeX Error) ---")
+                      print(line.strip())
+                      break
+          if re.search(r"Overfull \hbox", log):
+              fails.append("Overfull hbox")
+              show("Overfull \hbox")
+
           if fails:
               print("QA FAIL:", "; ".join(fails))
               sys.exit(1)
