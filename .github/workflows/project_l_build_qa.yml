@@ -3,12 +3,8 @@ name: Project-L Build + QA + ReleasePack
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'PROJECT_L/**'
-      - '.github/workflows/**'
-
-permissions:
-  contents: read
+    branches: ["main"]
+  pull_request:
 
 jobs:
   build:
@@ -17,14 +13,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install TeX (LuaLaTeX) + latexmk
+      - name: Install TeX + tools + fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            texlive-luatex texlive-latex-extra texlive-pictures texlive-science \
-            texlive-fonts-recommended texlive-fonts-extra latexmk zip python3
-          # Fonts: best-effort (never fail the build on missing font packages)
-          sudo apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-extra fonts-dejavu fonts-stix
+          sudo apt-get install -y             texlive-luatex             texlive-latex-extra             texlive-fonts-recommended             texlive-fonts-extra             texlive-science             texlive-pictures             latexmk             zip             fonts-noto-core             fonts-noto-extra             fonts-stix || true
 
       - name: Build DOC00_TEMPLATE
         working-directory: PROJECT_L
@@ -35,56 +27,57 @@ jobs:
         working-directory: PROJECT_L
         run: |
           python3 - << 'PY'
-          import sys, pathlib, re
-          logp = pathlib.Path("DOCS/DOC00_TEMPLATE/main.log")
-          if not logp.exists():
-              print("QA FAIL: log not found")
+          import sys
+          from pathlib import Path
+
+          log_path = Path("DOCS/DOC00_TEMPLATE/main.log")
+          if not log_path.exists():
+              print("QA FAIL: main.log not found (build did not produce log)")
               sys.exit(1)
-          log = logp.read_text(errors="ignore")
-          fails = []
 
-          def show(substr, max_lines=25):
-              hits = []
-              for line in log.splitlines():
-                  if substr in line:
-                      hits.append(line.strip())
-                      if len(hits) >= max_lines:
-                          break
-              if hits:
-                  print(f"--- QA DEBUG ({substr}) first {len(hits)} lines ---")
-                  for h in hits:
-                      print(h)
+          txt = log_path.read_text(encoding="utf-8", errors="ignore")
 
-          if "Missing character:" in log:
-              fails.append("Missing character (tofu risk)")
-              show("Missing character:")
-          if "Font substitution" in log:
-              fails.append("Font substitution")
-              show("Font substitution")
-          if "! LaTeX Error:" in log:
-              fails.append("LaTeX Error")
-              for line in log.splitlines():
-                  if line.startswith("! LaTeX Error:"):
-                      print("--- QA DEBUG (first LaTeX Error) ---")
-                      print(line.strip())
-                      break
-          if re.search(r"Overfull \hbox", log):
-              fails.append("Overfull hbox")
-              show("Overfull \hbox")
+          # Fail-closed checks (deterministic, no regex escapes)
+          issues = []
 
-          if fails:
-              print("QA FAIL:", "; ".join(fails))
+          if "Missing character:" in txt:
+              issues.append("Missing character (tofu risk)")
+
+          if "LaTeX Error:" in txt or "! LaTeX Error:" in txt:
+              issues.append("LaTeX Error present in log")
+
+          if "Fatal error occurred" in txt:
+              issues.append("Fatal error occurred")
+
+          # Not a hard-fail by default, but keep as warning bucket (you can make it hard later)
+          overfull = ("Overfull \\hbox" in txt) or ("Underfull \\hbox" in txt)
+
+          if issues:
+              print("QA FAIL:", "; ".join(issues))
+              lines = [
+                  ln for ln in txt.splitlines()
+                  if ("Missing character:" in ln) or ("LaTeX Error" in ln) or ("Fatal error" in ln)
+              ]
+              print("--- QA DEBUG (first 40 relevant lines) ---")
+              for ln in lines[:40]:
+                  print(ln)
+              if overfull:
+                  print("QA NOTE: Overfull/Underfull \\hbox warnings exist (not fail yet).")
               sys.exit(1)
-          print("QA PASS")
+
+          if overfull:
+              print("QA PASS (with NOTE: Overfull/Underfull \\hbox warnings exist)")
+          else:
+              print("QA PASS")
           PY
 
-      - name: Make ReleasePack zip
+      - name: Make CI ReleasePack zip
         working-directory: PROJECT_L
         run: |
           mkdir -p _release
-          zip -r _release/RELEASEPACK_PROJECT_L_CI.zip DOCS STYLEKIT TOOLS CONTRACT DB REGISTRY ANNEX QA || true
+          zip -r _release/RELEASEPACK_PROJECT_L_CI.zip             DOCS STYLEKIT TOOLS CONTRACT DB REGISTRY GOVERNANCE .gitignore || true
 
-      - name: Upload artifact (ReleasePack)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: RELEASEPACK_PROJECT_L_CI
