@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{sahand_q1}[2026/02/08 Sahand Q1 Class v1.3]
+\ProvidesClass{sahand_q1}[2026/02/08 Sahand Q1 Class v1.4]
 
 % ===== Base =====
 \LoadClass[11pt,a4paper]{article}
@@ -57,7 +57,7 @@
 \RequirePackage{hyperref}
 \hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
 
-\RequirePackage{amsmath,amssymb,amsthm}
+\RequirePackage{amsmath,amsthm}
 \RequirePackage{booktabs,tabularx,longtable,array}
 \RequirePackage{graphicx}
 \RequirePackage{caption}
