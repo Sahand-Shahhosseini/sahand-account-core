@@ -20,7 +20,11 @@ jobs:
       - name: Install TeX (LuaLaTeX) + latexmk
         run: |
           sudo apt-get update
-          sudo apt-get install -y texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra texlive-pictures latexmk zip fonts-noto-core fonts-stix fonts-dejavu || sudo apt-get install -y texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra latexmk zip fonts-noto-core fonts-stix
+          sudo apt-get install -y --no-install-recommends \
+            texlive-luatex texlive-latex-extra texlive-pictures texlive-science \
+            texlive-fonts-recommended texlive-fonts-extra latexmk zip python3
+          # Fonts: best-effort (never fail the build on missing font packages)
+          sudo apt-get install -y --no-install-recommends fonts-noto-core fonts-dejavu fonts-stix || true
 
       - name: Build DOC00_TEMPLATE
         working-directory: PROJECT_L
