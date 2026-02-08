@@ -43,7 +43,7 @@
     \newfontfamily\persianfont{Amiri}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
   }{%
     \newfontfamily\persianfont{DejaVu Sans}[Script=Arabic,Language=Persian]%
-  }}}}}%
+  }}}}%
 }
 
 \newcommand{\SahandChooseMathFont}{%
