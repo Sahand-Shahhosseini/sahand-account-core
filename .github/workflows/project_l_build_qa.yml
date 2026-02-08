@@ -1,0 +1,61 @@
+name: Project-L Build + QA + ReleasePack
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'PROJECT_L/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install TeX (LuaLaTeX) + latexmk
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra latexmk zip fonts-noto-core fonts-stix fonts-vazirmatn || sudo apt-get install -y texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra latexmk zip fonts-noto-core fonts-stix
+
+      - name: Build DOC00_TEMPLATE
+        working-directory: PROJECT_L
+        run: |
+          latexmk -r TOOLS/latexmkrc -cd DOCS/DOC00_TEMPLATE/main.tex
+
+      - name: QA (log sieve; fail-closed)
+        working-directory: PROJECT_L
+        run: |
+          python3 - << 'PY'
+          import sys, pathlib, re
+          logp = pathlib.Path("DOCS/DOC00_TEMPLATE/main.log")
+          if not logp.exists():
+              print("QA FAIL: log not found")
+              sys.exit(1)
+          log = logp.read_text(errors="ignore")
+          fails = []
+          if "Missing character:" in log: fails.append("Missing character (tofu risk)")
+          if "Font substitution" in log: fails.append("Font substitution")
+          if "! LaTeX Error:" in log: fails.append("LaTeX Error")
+          if re.search(r"Overfull \\hbox", log): fails.append("Overfull hbox")
+          if fails:
+              print("QA FAIL:", "; ".join(fails))
+              sys.exit(1)
+          print("QA PASS")
+          PY
+
+      - name: Make ReleasePack zip
+        working-directory: PROJECT_L
+        run: |
+          mkdir -p _release
+          zip -r _release/RELEASEPACK_PROJECT_L_CI.zip DOCS STYLEKIT TOOLS CONTRACT DB REGISTRY ANNEX QA || true
+
+      - name: Upload artifact (ReleasePack)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RELEASEPACK_PROJECT_L_CI
+          path: PROJECT_L/_release/RELEASEPACK_PROJECT_L_CI.zip

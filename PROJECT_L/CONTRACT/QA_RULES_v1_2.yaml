@@ -1,0 +1,45 @@
+version: v1.2
+gates:
+  G0_identity:
+    required: true
+    checks:
+      - doc_header_present
+      - build_id_present
+      - contract_version_match
+  G1_build:
+    required: true
+    checks:
+      - latex_errors_zero
+  G2_unicode_font:
+    required: true
+    checks:
+      - missing_character_zero
+      - font_substitution_zero
+  G3_layout:
+    required: true
+    checks:
+      - overfull_hbox_within_threshold
+      - underfull_badness_within_threshold
+  G4_tables:
+    required: true
+    checks:
+      - no_table_overflow
+      - longtable_required_for_long_tables
+  G5_figures:
+    required: true
+    checks:
+      - figure_refs_present
+  G6_tests_section:
+    required_if: Q1_PDF
+    checks:
+      - tests_section_present
+      - at_least_one_table
+      - at_least_one_figure
+  G7_registry_annex:
+    required: true
+    checks:
+      - sha256sums_present
+      - annex_present
+      - registry_record_present
+
+failure_mode: HARD_FAIL

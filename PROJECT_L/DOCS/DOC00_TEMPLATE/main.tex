@@ -1,0 +1,71 @@
+\documentclass{sahand_q1}
+\usepackage{sahand_q1}
+
+% --- Identity block (required by ContentLaw) ---
+\newcommand{\DocID}{DOC00\_TEMPLATE}
+\newcommand{\DocVersion}{v0\_1\_0}
+\newcommand{\DocStatus}{S0}
+\newcommand{\BuildID}{BUILD\_LOCAL}
+
+\title{\textbf{Sahand Account — Q1 PDF Template}\\\large \DocID\ (\DocVersion) — \DocStatus}
+\author{Sahand Account Canon}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Contract & QUALITY\_CONTRACT\_v1.2 \\
+DocID & \DocID \\
+Version & \DocVersion \\
+Status & \DocStatus \\
+BuildID & \BuildID \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\tableofcontents
+
+\section{Purpose}
+This document is a minimal compile test that exercises:
+(1) Latin text, (2) math glyphs, (3) Persian glyphs, (4) a table, (5) a figure placeholder, and
+(6) the mandatory \texttt{Tests \& Gates} section.
+
+\section{Glyph sanity}
+Latin: The quick brown fox jumps over the lazy dog.
+
+Math: $ \int_0^1 x^2\,dx = \frac{1}{3} \quad,\quad \forall \epsilon>0,\ \exists \delta>0.$
+
+Persian: \textfa{این یک تستِ فونت فارسی است تا مربع‌های سیاه تولید نشوند.}
+
+\section{A table (required)}
+\begin{table}[H]
+\centering
+\caption{Minimal table style test}
+\begin{tabularx}{0.9\linewidth}{lY}
+\toprule
+Key & Value \\
+\midrule
+A & Uses booktabs + tabularx. \\
+B & Should not overflow. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{A figure (required)}
+\begin{figure}[H]
+\centering
+\fbox{\rule{0pt}{40mm}\rule{0.8\linewidth}{0pt}}
+\caption{Figure placeholder (replace with vector PDF/SVG).}
+\end{figure}
+
+\TestsAndGatesSection
+\begin{itemize}
+\item Gate G2 (Missing character): PASS if log contains zero ``Missing character:'' lines.
+\item Gate G3 (Overfull hbox): PASS if overfull count within threshold.
+\item Gate G7 (Registry/Annex): PASS if SHA256SUMS + ANNEX + SQLite record exist.
+\end{itemize}
+
+\end{document}

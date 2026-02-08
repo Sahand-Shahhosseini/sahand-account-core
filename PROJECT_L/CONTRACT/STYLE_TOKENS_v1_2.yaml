@@ -1,0 +1,24 @@
+version: v1.2
+paper: A4
+margins_mm: 25
+
+typography:
+  base_font_pt: 11
+  line_spacing: 1.15
+  heading_style: "bold"
+  code_font_pt: 9
+
+tables:
+  prefer: ["booktabs", "tabularx"]
+  long_tables: "longtable"
+  max_columns_without_tabularx: 6
+
+figures:
+  prefer_vector: true
+  raster_min_dpi: 300
+
+fonts:
+  engine: lualatex
+  latin_text: "Libertinus Serif"
+  math: "STIX Two Math"
+  persian: "Vazirmatn"

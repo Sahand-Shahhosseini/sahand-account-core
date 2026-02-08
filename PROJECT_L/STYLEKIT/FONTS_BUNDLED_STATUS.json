@@ -1,0 +1,12 @@
+{
+  "bundled": [],
+  "missing": [
+    "LibertinusSerif-Regular.otf",
+    "LibertinusSerif-Bold.otf",
+    "LibertinusSerif-Italic.otf",
+    "LibertinusSerif-BoldItalic.otf",
+    "STIXTwoMath-Regular.otf",
+    "Vazirmatn-Regular.ttf",
+    "Vazirmatn-Bold.ttf"
+  ]
+}

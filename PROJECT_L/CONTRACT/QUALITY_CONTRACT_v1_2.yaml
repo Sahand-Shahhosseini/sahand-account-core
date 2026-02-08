@@ -1,0 +1,24 @@
+version: v1.2
+default_mode: LAW_ON
+timezone: Asia/Baku
+
+artifact_classes:
+  - Q1_PDF
+  - OPS_DOC
+  - DATA_PACK
+  - CODE_PACK
+  - RELEASEPACK
+
+promotion_rules:
+  S0:
+    requires: [G0, G1]
+  S1:
+    requires: [G0, G1, G2, G3]
+  S2:
+    requires: [G0, G1, G2, G3, G4, G5, G6, G7]
+  S3:
+    requires: [G0, G1, G2, G3, G4, G5, G6, G7, FREEZE_STAMP]
+
+notes:
+  - "Fail-closed: any unmet required gate => INVALID."
+  - "Override tokens: LAW_OFF, LAW_RELAX. Default: LAW_ON."

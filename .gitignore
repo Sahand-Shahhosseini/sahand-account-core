@@ -1,0 +1,14 @@
+# Project-L build artifacts (never commit)
+PROJECT_L/**/_release/
+PROJECT_L/**/main.pdf
+PROJECT_L/**/main.aux
+PROJECT_L/**/main.log
+PROJECT_L/**/main.out
+PROJECT_L/**/main.fls
+PROJECT_L/**/main.fdb_latexmk
+PROJECT_L/**/main.synctex.gz
+PROJECT_L/**/build/
+PROJECT_L/**/QA_REPORT_*.json
+PROJECT_L/**/QA_REPORT_*.txt
+PROJECT_L/**/SHA256SUMS.txt
+PROJECT_L/**/ANNEX.md
