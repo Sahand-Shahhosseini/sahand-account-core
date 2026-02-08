@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{sahand_q1}[2026/02/08 Sahand Q1 Class v1.5]
+\ProvidesClass{sahand_q1}[2026/02/09 Sahand Q1 Class v1.6]
 
 % ===== Base =====
 \LoadClass[11pt,a4paper]{article}
@@ -13,12 +13,16 @@
   \ClassError{sahand_q1}{This class requires LuaLaTeX}{Run with lualatex (not pdflatex/xelatex).}
 \fi
 
-% ===== Fonts (NO bundled hard paths; robust system fallbacks) =====
+% ===== Fonts + Language (LuaLaTeX, RTL-safe) =====
 \RequirePackage{fontspec}
-\RequirePackage{unicode-math}
 \defaultfontfeatures{Ligatures=TeX}
 
-% Helper: choose first existing font from a list
+% Polyglossia provides proper RTL direction for Persian lines.
+\RequirePackage{polyglossia}
+\setdefaultlanguage{english}
+\setotherlanguage{farsi}
+
+% Helper: choose first existing font from a list (robust CI fallbacks)
 \newcommand{\SahandChooseMainFont}{%
   \IfFontExistsTF{Libertinus Serif}{\setmainfont{Libertinus Serif}}{%
   \IfFontExistsTF{LibertinusSerif}{\setmainfont{LibertinusSerif}}{%
@@ -28,24 +32,29 @@
   }}}}%
 }
 
-\newcommand{\SahandChoosePersianFont}{%
-  % Prefer Noto Arabic fonts in CI (Ubuntu: fonts-noto-*)
+% Persian font selection: define \farsifont (polyglossia expects this)
+\newcommand{\SahandChooseFarsiFont}{%
   \IfFontExistsTF{Noto Naskh Arabic}{%
-    \newfontfamily\persianfont{Noto Naskh Arabic}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
+    \newfontfamily\farsifont[Script=Arabic,Language=Persian,Renderer=HarfBuzz]{Noto Naskh Arabic}%
   }{%
   \IfFontExistsTF{Noto Sans Arabic}{%
-    \newfontfamily\persianfont{Noto Sans Arabic}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
+    \newfontfamily\farsifont[Script=Arabic,Language=Persian,Renderer=HarfBuzz]{Noto Sans Arabic}%
   }{%
   \IfFontExistsTF{Vazirmatn}{%
-    \newfontfamily\persianfont{Vazirmatn}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
+    \newfontfamily\farsifont[Script=Arabic,Language=Persian,Renderer=HarfBuzz]{Vazirmatn}%
   }{%
   \IfFontExistsTF{Amiri}{%
-    \newfontfamily\persianfont{Amiri}[Script=Arabic,Language=Persian,Renderer=HarfBuzz]%
+    \newfontfamily\farsifont[Script=Arabic,Language=Persian,Renderer=HarfBuzz]{Amiri}%
   }{%
-    \newfontfamily\persianfont{DejaVu Sans}[Script=Arabic,Language=Persian]%
+    \newfontfamily\farsifont[Script=Arabic,Language=Persian]{DejaVu Sans}%
   }}}}%
 }
 
+\SahandChooseMainFont
+\SahandChooseFarsiFont
+
+% Math font (unicode-math)
+\RequirePackage{unicode-math}
 \newcommand{\SahandChooseMathFont}{%
   \IfFontExistsTF{STIX Two Math}{\setmathfont{STIX Two Math}}{%
   \IfFontExistsTF{STIXTwoMath}{\setmathfont{STIXTwoMath}}{%
@@ -53,13 +62,12 @@
   % fallback: let unicode-math pick default
   }}}%
 }
-
-\SahandChooseMainFont
-\SahandChoosePersianFont
 \SahandChooseMathFont
 
-% Persian helper (minimal; for full RTL you can later add bidi/polyglossia)
-\newcommand{\textfa}[1]{{\persianfont #1}}
+% Aliases (account-wide convention)
+% Use \textfa{...} for short RTL snippets, and \begin{fa}...\end{fa} for paragraphs.
+\newcommand{\textfa}[1]{\textfarsi{#1}}
+\newenvironment{fa}{\begin{farsi}}{\end{farsi}}
 
 % ===== Core packages =====
 \RequirePackage{microtype}
