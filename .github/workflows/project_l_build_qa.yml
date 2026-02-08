@@ -16,7 +16,18 @@ jobs:
       - name: Install TeX + tools + fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y             texlive-luatex             texlive-latex-extra             texlive-fonts-recommended             texlive-fonts-extra             texlive-science             texlive-pictures             latexmk             zip             fonts-noto-core             fonts-noto-extra             fonts-stix || true
+          sudo apt-get install -y \
+            texlive-luatex \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-fonts-extra \
+            texlive-science \
+            texlive-pictures \
+            latexmk \
+            zip \
+            fonts-noto-core \
+            fonts-noto-extra \
+            fonts-stix || true
 
       - name: Build DOC00_TEMPLATE
         working-directory: PROJECT_L
@@ -37,19 +48,14 @@ jobs:
 
           txt = log_path.read_text(encoding="utf-8", errors="ignore")
 
-          # Fail-closed checks (deterministic, no regex escapes)
           issues = []
-
           if "Missing character:" in txt:
               issues.append("Missing character (tofu risk)")
-
           if "LaTeX Error:" in txt or "! LaTeX Error:" in txt:
               issues.append("LaTeX Error present in log")
-
           if "Fatal error occurred" in txt:
               issues.append("Fatal error occurred")
 
-          # Not a hard-fail by default, but keep as warning bucket (you can make it hard later)
           overfull = ("Overfull \\hbox" in txt) or ("Underfull \\hbox" in txt)
 
           if issues:
@@ -71,14 +77,39 @@ jobs:
               print("QA PASS")
           PY
 
-      - name: Make CI ReleasePack zip
+      - name: Build SAFE bundle (PDF-only + SHA256)
         working-directory: PROJECT_L
         run: |
-          mkdir -p _release
-          zip -r _release/RELEASEPACK_PROJECT_L_CI.zip             DOCS STYLEKIT TOOLS CONTRACT DB REGISTRY GOVERNANCE .gitignore || true
+          mkdir -p _release_safe/ANNEX _release_safe/PDFS
+          cp DOCS/DOC00_TEMPLATE/main.pdf _release_safe/PDFS/DOC00_TEMPLATE_main.pdf
+          cp DOCS/DOC00_TEMPLATE/main.log _release_safe/DOC00_TEMPLATE_main.log || true
+          (cd _release_safe && sha256sum PDFS/* > ANNEX/SHA256SUMS.txt) || true
+          cat > _release_safe/README_SAFE.txt << 'EOF'
+          SAFE_PDF_BUNDLE (PDF-only)
+          - Contains only PDFs and text logs (no .cmd/.ps1/.exe), to reduce antivirus false positives.
+          - Verify integrity:
+              certutil -hashfile DOC00_TEMPLATE_main.pdf SHA256
+            and compare with ANNEX/SHA256SUMS.txt
+          EOF
+          (cd _release_safe && zip -r SAFE_PDF_BUNDLE.zip .)
 
-      - name: Upload artifact
+      - name: Upload SAFE artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RELEASEPACK_PROJECT_L_CI
-          path: PROJECT_L/_release/RELEASEPACK_PROJECT_L_CI.zip
+          name: SAFE_PDF_BUNDLE
+          path: PROJECT_L/_release_safe/SAFE_PDF_BUNDLE.zip
+
+      - name: Make FULL CI ReleasePack (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        working-directory: PROJECT_L
+        run: |
+          mkdir -p _release_full
+          zip -r _release_full/RELEASEPACK_PROJECT_L_FULL.zip \
+            DOCS STYLEKIT TOOLS CONTRACT DB REGISTRY GOVERNANCE .gitignore || true
+
+      - name: Upload FULL artifact (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: FULL_RELEASEPACK_OPTIONAL
+          path: PROJECT_L/_release_full/RELEASEPACK_PROJECT_L_FULL.zip
