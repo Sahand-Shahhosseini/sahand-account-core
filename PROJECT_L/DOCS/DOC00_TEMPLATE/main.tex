@@ -3,9 +3,9 @@
 
 % --- Identity block (required by ContentLaw) ---
 \newcommand{\DocID}{DOC00\_TEMPLATE}
-\newcommand{\DocVersion}{v0\_1\_0}
+\newcommand{\DocVersion}{v0\_1\_1}
 \newcommand{\DocStatus}{S0}
-\newcommand{\BuildID}{BUILD\_LOCAL}
+\newcommand{\BuildID}{BUILD\_CI}
 
 \title{\textbf{Sahand Account — Q1 PDF Template}\\\large \DocID\ (\DocVersion) — \DocStatus}
 \author{Sahand Account Canon}
@@ -30,7 +30,7 @@ BuildID & \BuildID \\
 
 \section{Purpose}
 This document is a minimal compile test that exercises:
-(1) Latin text, (2) math glyphs, (3) Persian glyphs, (4) a table, (5) a figure placeholder, and
+(1) Latin text, (2) math glyphs, (3) Persian glyphs, (4) a table, (5) a chart, and
 (6) the mandatory \texttt{Tests \& Gates} section.
 
 \section{Glyph sanity}
@@ -38,7 +38,7 @@ Latin: The quick brown fox jumps over the lazy dog.
 
 Math: $ \int_0^1 x^2\,dx = \frac{1}{3} \quad,\quad \forall \epsilon>0,\ \exists \delta>0.$
 
-Persian: \textfa{این یک تستِ فونت فارسی است تا مربع‌های سیاه تولید نشوند.}
+Persian: \textfa{این یک تستِ فونت فارسی است تا مربع‌های سیاه/خالی تولید نشوند.}
 
 \section{A table (required)}
 \begin{table}[H]
@@ -50,22 +50,42 @@ Key & Value \\
 \midrule
 A & Uses booktabs + tabularx. \\
 B & Should not overflow. \\
+C & Persian+Math should render without tofu. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\section{A chart (required)}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.85\linewidth,
+  height=55mm,
+  xlabel={$k$},
+  ylabel={Scope$_c(k)$},
+  grid=both,
+  legend style={at={(0.02,0.98)},anchor=north west},
+]
+\addplot+[mark=none] coordinates {(0,0) (1,1) (2,1.4) (3,1.7) (4,1.8) (5,1.85) (6,1.88) (7,1.89)};
+\addlegendentry{Example signal}
+\end{axis}
+\end{tikzpicture}
+\caption{Inline pgfplots chart (no external assets).}
+\end{figure}
+
 \section{A figure (required)}
 \begin{figure}[H]
 \centering
-\fbox{\rule{0pt}{40mm}\rule{0.8\linewidth}{0pt}}
-\caption{Figure placeholder (replace with vector PDF/SVG).}
+\fbox{\rule{0pt}{35mm}\rule{0.8\linewidth}{0pt}}
+\caption{Figure placeholder (replace with vector PDF/SVG later).}
 \end{figure}
 
 \TestsAndGatesSection
 \begin{itemize}
-\item Gate G2 (Missing character): PASS if log contains zero ``Missing character:'' lines.
-\item Gate G3 (Overfull hbox): PASS if overfull count within threshold.
-\item Gate G7 (Registry/Annex): PASS if SHA256SUMS + ANNEX + SQLite record exist.
+\item Gate G2 (Missing character): PASS iff log contains zero ``Missing character:'' lines.
+\item Gate G3 (Overfull hbox): PASS iff overfull count $\le 5$ (template should be 0).
+\item Gate G7 (Registry/Annex): PASS iff SHA256SUMS + ANNEX + SQLite record exist (later stage).
 \end{itemize}
 
 \end{document}
