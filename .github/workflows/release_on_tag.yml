@@ -1,9 +1,10 @@
-name: Release on tag
+name: Release on Tag
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,27 +16,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install TeX + tools (REQUIRED, fail-closed)
+      - name: Install TeX + deps (LuaLaTeX + RTL)
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y             texlive-luatex             texlive-latex-extra             texlive-fonts-recommended             texlive-fonts-extra             texlive-lang-arabic             texlive-pictures             latexmk             zip
-
-      - name: Install fonts (OPTIONAL)
-        run: |
-          sudo apt-get install -y             fonts-noto-core             fonts-stix             fonts-dejavu || true
+          sudo apt-get install -y --no-install-recommends \
+            latexmk \
+            texlive-luatex \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-fonts-extra \
+            texlive-lang-arabic texlive-lang-other \
+            fonts-dejavu fonts-noto-core fonts-noto-extra \
+            python3 \
+            zip unzip rsync
+          fc-cache -f || true
 
       - name: Build DOC00_TEMPLATE
-        working-directory: PROJECT_L
+        working-directory: PROJECT_L/DOCS/DOC00_TEMPLATE
         run: |
-          latexmk -r TOOLS/latexmkrc -cd DOCS/DOC00_TEMPLATE/main.tex
+          set -euo pipefail
+          touch main.toc main.lof main.lot main.out main.aux
+          latexmk -r ../../TOOLS/latexmkrc main.tex
 
-      - name: Make ReleasePack zip
-        working-directory: PROJECT_L
+      - name: Build SAFE bundle (PDF-only + SHA256)
         run: |
-          mkdir -p _release
-          zip -r _release/RELEASEPACK_PROJECT_L_${{ github.ref_name }}.zip DOCS STYLEKIT TOOLS CONTRACT DB REGISTRY ANNEX QA || true
+          set -euo pipefail
+          rm -rf SAFE_PDF_BUNDLE
+          mkdir -p SAFE_PDF_BUNDLE
+          cp PROJECT_L/DOCS/DOC00_TEMPLATE/main.pdf SAFE_PDF_BUNDLE/DOC00_TEMPLATE_main.pdf
+          (cd SAFE_PDF_BUNDLE && sha256sum *.pdf > SHA256SUMS.txt)
+          (cd SAFE_PDF_BUNDLE && zip -r SAFE_PDF_BUNDLE.zip .)
 
-      - name: Publish GitHub Release
+      - name: Build FULL ReleasePack
+        run: |
+          set -euo pipefail
+          rm -rf FULL_RELEASEPACK
+          mkdir -p FULL_RELEASEPACK/sahand-account-core
+          rsync -a --exclude='.git' ./ FULL_RELEASEPACK/sahand-account-core/
+          (cd FULL_RELEASEPACK && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (cd FULL_RELEASEPACK && zip -r FULL_RELEASEPACK.zip sahand-account-core SHA256SUMS.txt)
+
+      - name: Create GitHub Release + upload assets
         uses: softprops/action-gh-release@v2
         with:
-          files: PROJECT_L/_release/*.zip
+          files: |
+            SAFE_PDF_BUNDLE/SAFE_PDF_BUNDLE.zip
+            FULL_RELEASEPACK/FULL_RELEASEPACK.zip
