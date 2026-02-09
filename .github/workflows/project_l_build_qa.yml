@@ -1,10 +1,12 @@
-name: Project-L Build + QA + ReleasePack
+name: Project-L Build + QA
 
 on:
-  workflow_dispatch:
   push:
     branches: ["main"]
-  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -13,97 +15,109 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install TeX + tools (REQUIRED, fail-closed)
+      - name: Install TeX + deps (LuaLaTeX + RTL)
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y             texlive-luatex             texlive-latex-extra             texlive-fonts-recommended             texlive-fonts-extra             texlive-lang-arabic             texlive-science             texlive-pictures             latexmk             zip
-
-      - name: Install fonts (OPTIONAL)
-        run: |
-          sudo apt-get install -y             fonts-noto-core             fonts-noto-extra             fonts-stix || true
+          sudo apt-get install -y --no-install-recommends \
+            latexmk \
+            texlive-luatex \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-fonts-extra \
+            texlive-lang-arabic texlive-lang-other \
+            fonts-dejavu fonts-noto-core fonts-noto-extra \
+            python3 \
+            zip unzip rsync
+          fc-cache -f || true
 
       - name: Build DOC00_TEMPLATE
-        working-directory: PROJECT_L
+        working-directory: PROJECT_L/DOCS/DOC00_TEMPLATE
         run: |
-          latexmk -r TOOLS/latexmkrc -cd DOCS/DOC00_TEMPLATE/main.tex
+          set -euo pipefail
+          # Prevent latexmk "missing .toc" fail on first pass in strict CI
+          touch main.toc main.lof main.lot main.out main.aux
+          latexmk -r ../../TOOLS/latexmkrc main.tex
 
       - name: QA (log sieve; fail-closed)
         working-directory: PROJECT_L
         run: |
-          python3 - << 'PY'
-          import sys
+          set -euo pipefail
+          python3 - <<'PY'
           from pathlib import Path
+          import re, sys
 
           log_path = Path("DOCS/DOC00_TEMPLATE/main.log")
-          if not log_path.exists():
-              print("QA FAIL: main.log not found (build did not produce log)")
+          pdf_path = Path("DOCS/DOC00_TEMPLATE/main.pdf")
+
+          def tail(text: str, n=1200) -> str:
+            return text[-n:] if len(text) > n else text
+
+          if not pdf_path.exists():
+            print("QA FAIL: PDF not produced:", pdf_path)
+            if log_path.exists():
+              txt = log_path.read_text(errors="replace")
+              print("\n--- log tail ---\n", tail(txt), "\n--- end ---\n")
+            sys.exit(1)
+
+          txt = log_path.read_text(errors="replace") if log_path.exists() else ""
+
+          # HARD FAIL patterns (real compile/quality killers)
+          hard_patterns = [
+            r"! LaTeX Error:",
+            r"Emergency stop\.",
+            r"Fatal error occurred, no output PDF file produced!",
+            r"File `[^`]+?\.sty' not found",
+            r"Package .* Error:",
+            r"Missing character: There is no .*? in font",
+            r"Font .*? not found",
+          ]
+
+          for pat in hard_patterns:
+            if re.search(pat, txt):
+              print(f"QA FAIL: hit pattern: {pat}")
+              print("\n--- log tail ---\n", tail(txt), "\n--- end ---\n")
               sys.exit(1)
 
-          txt = log_path.read_text(encoding="utf-8", errors="ignore")
+          # WARN-only patterns (layout warnings; do NOT fail CI)
+          warn_patterns = [
+            r"Overfull \\hbox",
+            r"Underfull \\hbox",
+          ]
 
-          issues = []
-          if "luabidi.sty" in txt and "not found" in txt:
-              issues.append("luabidi.sty missing (install texlive-lang-arabic)")
-          if "Missing character:" in txt:
-              issues.append("Missing character (tofu risk)")
-          if "LaTeX Error:" in txt or "! LaTeX Error:" in txt:
-              issues.append("LaTeX Error present in log")
-          if "Fatal error occurred" in txt:
-              issues.append("Fatal error occurred")
+          for pat in warn_patterns:
+            if re.search(pat, txt):
+              print(f"QA WARN: {pat} present")
 
-          overfull = ("Overfull \\hbox" in txt) or ("Underfull \\hbox" in txt)
-
-          if issues:
-              print("QA FAIL:", "; ".join(issues))
-              lines = [
-                  ln for ln in txt.splitlines()
-                  if ("luabidi.sty" in ln) or ("Missing character:" in ln) or ("LaTeX Error" in ln) or ("Fatal error" in ln)
-              ]
-              print("--- QA DEBUG (first 60 relevant lines) ---")
-              for ln in lines[:60]:
-                  print(ln)
-              if overfull:
-                  print("QA NOTE: Overfull/Underfull \\hbox warnings exist (not fail yet).")
-              sys.exit(1)
-
-          if overfull:
-              print("QA PASS (with NOTE: Overfull/Underfull \\hbox warnings exist)")
-          else:
-              print("QA PASS")
+          print("QA PASS")
           PY
 
       - name: Build SAFE bundle (PDF-only + SHA256)
-        working-directory: PROJECT_L
         run: |
-          mkdir -p _release_safe/ANNEX _release_safe/PDFS
-          cp DOCS/DOC00_TEMPLATE/main.pdf _release_safe/PDFS/DOC00_TEMPLATE_main.pdf
-          cp DOCS/DOC00_TEMPLATE/main.log _release_safe/DOC00_TEMPLATE_main.log || true
-          (cd _release_safe && sha256sum PDFS/* > ANNEX/SHA256SUMS.txt) || true
-          cat > _release_safe/README_SAFE.txt << 'EOF'
-          SAFE_PDF_BUNDLE (PDF-only)
-          - Contains only PDFs and text logs (no .cmd/.ps1/.exe), to reduce antivirus false positives.
-          - Verify integrity:
-              certutil -hashfile DOC00_TEMPLATE_main.pdf SHA256
-            and compare with ANNEX/SHA256SUMS.txt
-          EOF
-          (cd _release_safe && zip -r SAFE_PDF_BUNDLE.zip .)
+          set -euo pipefail
+          rm -rf SAFE_PDF_BUNDLE
+          mkdir -p SAFE_PDF_BUNDLE
+          cp PROJECT_L/DOCS/DOC00_TEMPLATE/main.pdf SAFE_PDF_BUNDLE/DOC00_TEMPLATE_main.pdf
+          (cd SAFE_PDF_BUNDLE && sha256sum *.pdf > SHA256SUMS.txt)
 
       - name: Upload SAFE artifact
         uses: actions/upload-artifact@v4
         with:
           name: SAFE_PDF_BUNDLE
-          path: PROJECT_L/_release_safe/SAFE_PDF_BUNDLE.zip
+          path: SAFE_PDF_BUNDLE
 
       - name: Make FULL CI ReleasePack (optional)
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        working-directory: PROJECT_L
+        if: ${{ always() }}
         run: |
-          mkdir -p _release_full
-          zip -r _release_full/RELEASEPACK_PROJECT_L_FULL.zip             DOCS STYLEKIT TOOLS CONTRACT DB REGISTRY GOVERNANCE .gitignore || true
+          set -euo pipefail
+          rm -rf FULL_RELEASEPACK_OPTIONAL
+          mkdir -p FULL_RELEASEPACK_OPTIONAL/sahand-account-core
+          rsync -a --exclude='.git' ./ FULL_RELEASEPACK_OPTIONAL/sahand-account-core/
+          (cd FULL_RELEASEPACK_OPTIONAL && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (cd FULL_RELEASEPACK_OPTIONAL && zip -r FULL_RELEASEPACK_OPTIONAL.zip sahand-account-core SHA256SUMS.txt)
 
       - name: Upload FULL artifact (optional)
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: FULL_RELEASEPACK_OPTIONAL
-          path: PROJECT_L/_release_full/RELEASEPACK_PROJECT_L_FULL.zip
+          path: FULL_RELEASEPACK_OPTIONAL/FULL_RELEASEPACK_OPTIONAL.zip
